@@ -1,0 +1,14 @@
+.truncate-two-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.premium-text {
+  background: linear-gradient(90deg, #f39c12, #e74c3c, #9b59b6);
+  font-weight: 600;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
