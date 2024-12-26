@@ -7,12 +7,14 @@ import UserTripCard from './components/UserTripCard';
 function MyTrips() {
   const navigate = useNavigate();
   const [userTrips, setUserTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     GetUserTrips();
   }, []);
 
   const GetUserTrips = async () => {
+    setLoading(true);
     const user = JSON.parse(localStorage.getItem("user"));
 
     if (!user) {
@@ -33,8 +35,9 @@ function MyTrips() {
       });
 
       setUserTrips(trips); // Reset the state with the fetched trips
-     
+     setLoading(false);
     } catch (error) {
+      setLoading(false);
       console.error("Error fetching user trips:", error);
     }
   };

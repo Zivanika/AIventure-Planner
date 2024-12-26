@@ -30,36 +30,67 @@ function Create() {
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [sourceInputValue, setSourceInputValue] = useState("");
+  const [destinationInputValue, setDestinationInputValue] = useState("");
+  const [sourceSuggestions, setSourceSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [sourceHighlightedIndex, setSourceHighlightedIndex] = useState(-1);
+  const [destinationHighlightedIndex, setDestinationHighlightedIndex] =
+    useState(-1);
+  const [isLoadingSource, setIsLoadingSource] = useState(false);
+  const [isLoadingDestination, setIsLoadingDestination] = useState(false);
 
-  const handleKeyDown = (e) => {
-    if (e.key === "ArrowDown") {
-      // Move down the suggestions list
-      setHighlightedIndex((prev) =>
-        prev < suggestions.length - 1 ? prev + 1 : prev
-      );
-    } else if (e.key === "ArrowUp") {
-      // Move up the suggestions list
-      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-    } else if (e.key === "Enter") {
-      // Select the highlighted suggestion
-      if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
-        handleSelectSuggestion(suggestions[highlightedIndex]);
+  const handleKeyDown = (e, type) => {
+    if (type === "source") {
+      if (e.key === "ArrowDown") {
+        setSourceHighlightedIndex((prev) =>
+          prev < sourceSuggestions.length - 1 ? prev + 1 : prev
+        );
+      } else if (e.key === "ArrowUp") {
+        setSourceHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      } else if (e.key === "Enter" && sourceHighlightedIndex >= 0) {
+        handleSelectSuggestion(
+          sourceSuggestions[sourceHighlightedIndex],
+          "source"
+        );
+      }
+    } else if (type === "destination") {
+      if (e.key === "ArrowDown") {
+        setDestinationHighlightedIndex((prev) =>
+          prev < destinationSuggestions.length - 1 ? prev + 1 : prev
+        );
+      } else if (e.key === "ArrowUp") {
+        setDestinationHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      } else if (e.key === "Enter" && destinationHighlightedIndex >= 0) {
+        handleSelectSuggestion(
+          destinationSuggestions[destinationHighlightedIndex],
+          "destination"
+        );
       }
     }
   };
 
-  const handlePlacesChange = async (value) => {
-    setInputValue(value);
+  const handlePlacesChange = async (value, type) => {
+    if (type === "source") {
+      setSourceInputValue(value);
+    } else if (type === "destination") {
+      setDestinationInputValue(value);
+    }
 
-    handleInputChange("location", value);
+    handleInputChange(type === "source" ? "source" : "location", value);
 
     if (value.trim().length === 0) {
-      setSuggestions([]);
+      if (type === "source") setSourceSuggestions([]);
+      else setDestinationSuggestions([]);
       return;
     }
 
-    setIsLoading(true);
+    const setLoading =
+      type === "source" ? setIsLoadingSource : setIsLoadingDestination;
+    const setSuggestions =
+      type === "source" ? setSourceSuggestions : setDestinationSuggestions;
+
+    setLoading(true);
     try {
       const response = await axios.get(
         `https://maps.gomaps.pro/maps/api/place/autocomplete/json`,
@@ -82,22 +113,24 @@ function Create() {
       console.error("Error fetching autocomplete suggestions:", error);
       setSuggestions([]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleSelectSuggestion = (suggestion) => {
-    setInputValue(suggestion);
-    handleInputChange("location", suggestion);
-    setSuggestions([]);
-    setHighlightedIndex(-1);
+  const handleSelectSuggestion = (suggestion, type) => {
+    if (type === "source") {
+      setSourceInputValue(suggestion);
+      setSourceSuggestions([]);
+      setSourceHighlightedIndex(-1);
+    } else if (type === "destination") {
+      setDestinationInputValue(suggestion);
+      setDestinationSuggestions([]);
+      setDestinationHighlightedIndex(-1);
+    }
+    handleInputChange(type === "source" ? "source" : "location", suggestion);
   };
 
   const navigate = useNavigate(); //navigating to next page
-
-  // useEffect(() => {
-  //   console.log(formData);
-  // }, [formData]);
 
   const handleInputChange = (name, value) => {
     setFormData((prev) => ({
@@ -119,11 +152,13 @@ function Create() {
     }
 
     if (
-      (formData.noOfDays > 5 && !formData.location) ||
+      !formData.noOfDays ||
+      !formData.source ||
+      !formData.location ||
       !formData.budget ||
       !formData.traveler
     ) {
-      toast("Please fill all the details");
+      toast.error("Please fill all the details");
       return;
     }
 
@@ -197,32 +232,69 @@ function Create() {
         dates for a personalized itinerary.
       </p>
       <div className="mt-10 flex flex-col gap-10">
+        {/* Source Input */}
         <h2 className="text-xl my-3 font-bold">
-          What is your destination this time?
+          Where are you starting your journey from?
         </h2>
         <div className="relative w-full ">
           <input
             type="text"
-            value={inputValue}
-            onKeyDown={handleKeyDown}
-            onChange={(e) => handlePlacesChange(e.target.value)}
+            value={sourceInputValue}
+            onKeyDown={(e) => handleKeyDown(e, "source")}
+            onChange={(e) => handlePlacesChange(e.target.value, "source")}
             placeholder="Search for a place"
             className="w-full p-2 border border-gray-300 rounded shadow"
           />
-          {isLoading && (
+          {isLoadingSource && (
             <div className="absolute my-2 text-gray-500">Loading...</div>
           )}
-          {suggestions.length > 0 && (
-            <ul className="absolute w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
-              {suggestions.map((suggestion, index) => (
+          {sourceSuggestions.length > 0 && (
+            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
+              {sourceSuggestions.map((suggestion, index) => (
                 <li
                   key={index}
                   className={`p-2 cursor-pointer ${
-                    index === highlightedIndex
+                    index === sourceHighlightedIndex
                       ? "bg-gray-200"
                       : "hover:bg-gray-200"
                   }`}
-                  onClick={() => handleSelectSuggestion(suggestion)}
+                  onClick={() => handleSelectSuggestion(suggestion, "source")}
+                >
+                  {suggestion}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <h2 className="text-xl my-3 font-bold">
+          What's your destination for this journey?
+        </h2>
+
+        <div className="relative w-full ">
+          <input
+            type="text"
+            value={destinationInputValue}
+            onKeyDown={(e) => handleKeyDown(e, "destination")}
+            onChange={(e) => handlePlacesChange(e.target.value, "destination")}
+            placeholder="Search for a place"
+            className="w-full p-2 border border-gray-300 rounded shadow"
+          />
+          {isLoadingDestination && (
+            <div className="absolute my-2 text-gray-500">Loading...</div>
+          )}
+          {destinationSuggestions.length > 0 && (
+            <ul className="absolute w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
+              {destinationSuggestions.map((suggestion, index) => (
+                <li
+                  key={index}
+                  className={`p-2 cursor-pointer ${
+                    index === destinationHighlightedIndex
+                      ? "bg-gray-200"
+                      : "hover:bg-gray-200"
+                  }`}
+                  onClick={() =>
+                    handleSelectSuggestion(suggestion, "destination")
+                  }
                 >
                   {suggestion}
                 </li>

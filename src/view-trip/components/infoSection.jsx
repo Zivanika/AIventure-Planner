@@ -22,7 +22,7 @@ function InfoSection({ trip }) {
         if (result.data.results[0]?.photos?.length > 0) {
           const photoReference =
             result.data.results[0].photos[0].photo_reference;
-          const constructedPhotoUrl = `https://maps.gomaps.pro/maps/api/place/photo?photo_reference=${photoReference}&maxwidth=400&key=AlzaSyeo8PM2mH1WAhHG0xU6behJJ2BxgekpnWD`;
+          const constructedPhotoUrl = `https://maps.gomaps.pro/maps/api/place/photo?photo_reference=${photoReference}&maxwidth=400&key=${import.meta.env.VITE_GOOGLE_PLACE_API_KEY}`;
           setPhotoUrl(constructedPhotoUrl);
         } else {
           console.warn("No photo found in the API response");
